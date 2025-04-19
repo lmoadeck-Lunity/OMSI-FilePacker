@@ -4,3 +4,10 @@ Packs scenery objects, splines, and their corresponding textures and models from
 
 - **Credit**  
   [Thomas Mathieson and his Blender o3d Plugin](https://github.com/space928/Blender-O3D-IO-Public)
+
+Instructions:
+
+1. Place the script in the root folder of your OMSI installation, e.g., `X:\OMSI 2 Steam Edition` or `X:\SteamLibrary\steamapps\common\OMSI 2`.
+2. Add the filenames of the scenery objects and splines you want to pack into a text file called `file_paths.txt` (the name can be changed inside the script).
+3. Run the script.
+4. You will receive a ZIP file and a `did not find.txt` file listing any missing files.
