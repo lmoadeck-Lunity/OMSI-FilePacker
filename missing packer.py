@@ -270,7 +270,7 @@ def read_sco(file):
     matls_from_o3d = set()
     meshs_from_sco = set()
     try:
-        fole = open(file, 'r', encoding='utf-8').readlines()
+        fole = open(file, 'r', encoding='utf-8',errors="ignore").readlines()
     except FileNotFoundError:
         print(f'File {file} not found.')
         with open("did_not_pack.txt", 'a') as f:
@@ -403,7 +403,7 @@ def pack_files(source_dir, output_zip_file, file_paths):
                             with open("did_not_pack.txt", 'a') as f:
                                 f.write(f'{file_full_path}\n')
                             continue
-
+                        
     # print(file_paths)
 
 
@@ -449,7 +449,7 @@ def read_file_paths(file_list_path):
         return file_paths
 
 output_zip_file = "packed_files.zip"
-file_list_path = "missing.txt"
+file_list_path = "file_paths.txt"
 source_directory = '.'
 file_paths = read_file_paths(file_list_path)
 print(file_paths) 
