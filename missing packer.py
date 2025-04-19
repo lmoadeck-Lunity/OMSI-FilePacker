@@ -363,22 +363,47 @@ def pack_files(source_dir, output_zip_file, file_paths):
             if file_path.endswith('\\*'):
                 continue
             full_path = os.path.join(source_dir, file_path)
-            zip_file.write(full_path, file_path)
+            try:
+                zip_file.write(full_path, file_path)
+                print(full_path, file_path)
+            except FileNotFoundError:
+                print(f'File {full_path} not found.')
+                with open("did_not_pack.txt", 'a') as f:
+                    f.write(f'{full_path}\n')
+                continue
 
         # Include additional files from the lists
         for file_path in file_ls:
             full_path = os.path.join(source_dir, file_path)
             if os.path.exists(full_path):
-                zip_file.write(full_path, file_path)
-                print(full_path, file_path)
+                try:
+                    zip_file.write(full_path, file_path)
+                    print(full_path, file_path)
+                except FileNotFoundError:
+                    print(f'File {full_path} not found.')
+                    with open("did_not_pack.txt", 'a') as f:
+                        f.write(f'{full_path}\n')
+                    continue
+            else:
+                print(f'File {full_path} not found.')
+                with open("did_not_pack.txt", 'a') as f:
+                    f.write(f'{full_path}\n')
+                continue
         for folders in folder_ls:
             folder_path = os.path.join(source_dir, folders)
             if os.path.exists(folder_path):
                 for root, _, files in os.walk(folder_path):
                     for file in files:
                         file_full_path = os.path.join(root, file)
-                        zip_file.write(file_full_path, os.path.relpath(file_full_path, source_dir))
-                        print(file_full_path, os.path.relpath(file_full_path, source_dir))
+                        try:
+                            zip_file.write(file_full_path, os.path.relpath(file_full_path, source_dir))
+                            print(file_full_path, os.path.relpath(file_full_path, source_dir))
+                        except FileNotFoundError:
+                            print(f'File {file_full_path} not found.')
+                            with open("did_not_pack.txt", 'a') as f:
+                                f.write(f'{file_full_path}\n')
+                            continue
+
     # print(file_paths)
 
 
@@ -424,7 +449,7 @@ def read_file_paths(file_list_path):
         return file_paths
 
 output_zip_file = "packed_files.zip"
-file_list_path = "file_paths.txt"
+file_list_path = "missing.txt"
 source_directory = '.'
 file_paths = read_file_paths(file_list_path)
 print(file_paths) 
