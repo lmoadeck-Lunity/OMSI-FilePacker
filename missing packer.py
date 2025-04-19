@@ -315,7 +315,7 @@ def read_sco(file):
 def read_sli(file):
     # print(file)
     try:
-        sli = open(file, 'r', encoding='utf-8').readlines()
+        sli = open(file, 'r', encoding='utf-8',errors="ignore").readlines()
     except FileNotFoundError:
         print(f'File {file} not found.')
         with open("did_not_pack.txt", 'a') as f:
