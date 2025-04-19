@@ -269,7 +269,13 @@ def import_o3d(packed_bytes,name):
 def read_sco(file):
     matls_from_o3d = set()
     meshs_from_sco = set()
-    fole = open(file, 'r', encoding='utf-8').readlines()
+    try:
+        fole = open(file, 'r', encoding='utf-8').readlines()
+    except FileNotFoundError:
+        print(f'File {file} not found.')
+        with open("did_not_pack.txt", 'a') as f:
+            f.write(f'{file}\n')
+        return matls_from_o3d, meshs_from_sco
     fole = [each.strip() for each in fole if each.strip() != '']
     count = 0
     file_directory = os.path.dirname(file)
@@ -307,7 +313,13 @@ def read_sco(file):
 
 def read_sli(file):
     # print(file)
-    sli = open(file, 'r', encoding='utf-8').readlines()
+    try:
+        sli = open(file, 'r', encoding='utf-8').readlines()
+    except FileNotFoundError:
+        print(f'File {file} not found.')
+        with open("did_not_pack.txt", 'a') as f:
+            f.write(f'{file}\n')
+        return set()
     sli = [each.strip() for each in sli if each.strip() != '']
     matls_from_sli = set()
     count = 0
@@ -321,6 +333,7 @@ def read_sli(file):
 
 
 def pack_files(source_dir, output_zip_file, file_paths):
+    open("did_not_pack.txt", 'w').close()
     file_ls = []
     folder_ls = []
     file_paths = [each.strip() for each in file_paths if each.strip() != '']
