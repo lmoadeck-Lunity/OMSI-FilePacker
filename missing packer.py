@@ -293,6 +293,7 @@ def read_sco(file):
                 o3d = open(f'{file_directory}/model/{o3dfile}', 'rb')
             except FileNotFoundError:
                 print(f'File {o3dfile} not found.')
+                count += 1
                 continue
             o3d_bytes = o3d.read()
             o3ddd = import_o3d(o3d_bytes, o3dfile)
