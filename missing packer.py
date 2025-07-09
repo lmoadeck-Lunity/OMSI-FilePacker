@@ -334,10 +334,24 @@ def read_sli(file):
 
 
 def pack_files(source_dir, output_zip_file, file_paths):
-    open("did_not_pack.txt", 'w').close()
+    #open("did_not_pack.txt", 'w').close()
     file_ls = []
     folder_ls = []
     file_paths = [each.strip() for each in file_paths if each.strip() != '']
+    global missing_files
+    missing_files = []
+    
+    # Size limit (14GB in bytes)
+    size_limit = 14 * 1024 * 1024 * 1024
+    current_size = 0
+    
+    # Get base name and extension for creating multiple ZIP parts
+    base_name = os.path.splitext(output_zip_file)[0]
+    extension = os.path.splitext(output_zip_file)[1]
+    current_part = 1
+    current_zip_file = f"{base_name}_part{current_part}{extension}"
+    
+    # Process file dependencies
     for each1 in file_paths:
         if each1.endswith('.sco'):
             aaa = read_sco(os.path.join(source_dir, each1))
@@ -348,7 +362,6 @@ def pack_files(source_dir, output_zip_file, file_paths):
                 if each3 not in file_paths:
                     file_ls.append(f"{os.path.dirname(each1)}/model/{each3}")
         if each1.endswith('.sli'):
-            # print(each1)
             aaa = read_sli(os.path.join(source_dir, each1))
             print(aaa)
             for each2 in aaa:
@@ -358,90 +371,104 @@ def pack_files(source_dir, output_zip_file, file_paths):
             each1 = each1[:-1]
             folder_ls.append(each1)
 
-    with zipfile.ZipFile(output_zip_file, 'w') as zip_file:
-        for file_path in file_paths:
-            if file_path.endswith('\\*'):
-                continue
-            full_path = os.path.join(source_dir, file_path)
+    # Open the first zip file
+    zip_file = zipfile.ZipFile(current_zip_file, 'w')
+    print(f"Creating {current_zip_file}")
+    
+    # Pack main file list
+    for file_path in file_paths:
+        if file_path.endswith('\\*'):
+            continue
+        full_path = os.path.join(source_dir, file_path)
+        try:
+            # Check if file would exceed size limit
+            file_size = os.path.getsize(full_path)
+            if current_size + file_size > size_limit:
+                # Close current zip and start a new one
+                print(f"Size limit reached. Closing {current_zip_file} at {current_size/1024/1024/1024:.2f} GB")
+                zip_file.close()
+                current_part += 1
+                current_zip_file = f"{base_name}_part{current_part}{extension}"
+                print(f"Creating {current_zip_file}")
+                zip_file = zipfile.ZipFile(current_zip_file, 'w')
+                current_size = 0
+                
+            # Add file to zip
+            zip_file.write(full_path, file_path)
+            current_size += file_size
+            print(f"{full_path} - {file_size/1024/1024:.2f} MB, Total: {current_size/1024/1024/1024:.2f} GB")
+        except FileNotFoundError:
+            print(f'File {full_path} not found.')
+            missing_files.append(f'{full_path}\n')
+            continue
+
+    # Include additional files from the lists
+    for file_path in file_ls:
+        full_path = os.path.join(source_dir, file_path)
+        if os.path.exists(full_path):
             try:
+                # Check if file would exceed size limit
+                file_size = os.path.getsize(full_path)
+                if current_size + file_size > size_limit:
+                    # Close current zip and start a new one
+                    print(f"Size limit reached. Closing {current_zip_file} at {current_size/1024/1024/1024:.2f} GB")
+                    zip_file.close()
+                    current_part += 1
+                    current_zip_file = f"{base_name}_part{current_part}{extension}"
+                    print(f"Creating {current_zip_file}")
+                    zip_file = zipfile.ZipFile(current_zip_file, 'w')
+                    current_size = 0
+                    
+                # Add file to zip
                 zip_file.write(full_path, file_path)
-                print(full_path, file_path)
+                current_size += file_size
+                print(f"{full_path} - {file_size/1024/1024:.2f} MB, Total: {current_size/1024/1024/1024:.2f} GB")
             except FileNotFoundError:
                 print(f'File {full_path} not found.')
-                with open("did_not_pack.txt", 'a') as f:
-                    f.write(f'{full_path}\n')
+                missing_files.append(f'{full_path}\n')
                 continue
-
-        # Include additional files from the lists
-        for file_path in file_ls:
-            full_path = os.path.join(source_dir, file_path)
-            if os.path.exists(full_path):
-                try:
-                    zip_file.write(full_path, file_path)
-                    print(full_path, file_path)
-                except FileNotFoundError:
-                    print(f'File {full_path} not found.')
-                    with open("did_not_pack.txt", 'a') as f:
-                        f.write(f'{full_path}\n')
-                    continue
-            else:
-                print(f'File {full_path} not found.')
-                with open("did_not_pack.txt", 'a') as f:
-                    f.write(f'{full_path}\n')
-                continue
-        for folders in folder_ls:
-            folder_path = os.path.join(source_dir, folders)
-            if os.path.exists(folder_path):
-                for root, _, files in os.walk(folder_path):
-                    for file in files:
-                        file_full_path = os.path.join(root, file)
-                        try:
-                            zip_file.write(file_full_path, os.path.relpath(file_full_path, source_dir))
-                            print(file_full_path, os.path.relpath(file_full_path, source_dir))
-                        except FileNotFoundError:
-                            print(f'File {file_full_path} not found.')
-                            with open("did_not_pack.txt", 'a') as f:
-                                f.write(f'{file_full_path}\n')
-                            continue
-                        
-    # print(file_paths)
-
-
-    # with zipfile.ZipFile(output_zip_file, 'w') as zip_file:
-    #     for file_path in file_paths:
-    #         print(file_path)
-    #         full_path = os.path.join(source_dir, file_path)
-    #         zip_file.write(full_path, file_path)
-    #         # print(full_path, file_path,file_path.strip().endswith('.sco'))
-    #         if file_path.strip().endswith('.sco'):
-    #             matls_from_sco = read_sco(full_path)
-    #             print(matls_from_sco)
-    #             for matl in matls_from_sco[0]:
-    #                 matl_path = os.path.join(source_dir, 'texture', matl)
-    #                 if os.path.exists(matl_path):
-    #                     zip_file.write(matl_path, os.path.relpath(matl_path, source_dir))
-    #                     print(matl_path,os.path.relpath(matl_path, source_dir))
-    #             for mesh in matls_from_sco[1]:
-    #                 mesh_path = os.path.join(source_dir, 'model', mesh)
-    #                 if os.path.exists(mesh_path):
-    #                     zip_file.write(mesh_path, os.path.relpath(mesh_path, source_dir))
-    #                     print(matl_path,os.path.relpath(mesh_path, source_dir))
-    #         if file_path.endswith('.sli'):
-    #             matls_from_sli = read_sli(full_path)
-    #             for matl in matls_from_sli:
-    #                 matl_path = os.path.join(source_dir, 'texture', matl)
-    #                 if os.path.exists(matl_path):
-    #                     zip_file.write(matl_path, os.path.relpath(matl_path, source_dir))
-    #                     print(matl_path,os.path.relpath(matl_path, source_dir))
-            # # Include 'model' and 'texture' folders and their contents
-            # for folder in ['model', 'texture']:
-            #     folder_path = os.path.join(os.path.dirname(full_path), folder)
-            #     if os.path.exists(folder_path):
-            #         for root, _, files in os.walk(folder_path):
-            #             for file in files:
-            #                 file_full_path = os.path.join(root, file)
-            #                 zip_file.write(file_full_path, os.path.relpath(file_full_path, source_dir))
+        else:
+            print(f'File {full_path} not found.')
+            missing_files.append(f'{full_path}\n')
+            continue
+            
+    # Process folders
+    for folders in folder_ls:
+        folder_path = os.path.join(source_dir, folders)
+        if os.path.exists(folder_path):
+            for root, _, files in os.walk(folder_path):
+                for file in files:
+                    file_full_path = os.path.join(root, file)
+                    try:
+                        # Check if file would exceed size limit
+                        file_size = os.path.getsize(file_full_path)
+                        if current_size + file_size > size_limit:
+                            # Close current zip and start a new one
+                            print(f"Size limit reached. Closing {current_zip_file} at {current_size/1024/1024/1024:.2f} GB")
+                            zip_file.close()
+                            current_part += 1
+                            current_zip_file = f"{base_name}_part{current_part}{extension}"
+                            print(f"Creating {current_zip_file}")
+                            zip_file = zipfile.ZipFile(current_zip_file, 'w')
+                            current_size = 0
                             
+                        # Add file to zip
+                        zip_file.write(file_full_path, os.path.relpath(file_full_path, source_dir))
+                        current_size += file_size
+                        print(f"{file_full_path} - {file_size/1024/1024:.2f} MB, Total: {current_size/1024/1024/1024:.2f} GB")
+                    except FileNotFoundError:
+                        print(f'File {file_full_path} not found.')
+                        missing_files.append(f'{file_full_path}\n')
+                        continue
+    
+    # Close the final zip file
+    print(f"Closing final zip part {current_part} at {current_size/1024/1024/1024:.2f} GB")
+    zip_file.close()
+    
+    if current_part > 1:
+        print(f"Created {current_part} zip parts due to 14GB size limit")
+    
+    return missing_files
 def read_file_paths(file_list_path):
     with open(file_list_path, 'r') as file:
         lines = file.read().splitlines()
